@@ -364,4 +364,30 @@ Adding installation directory to plugin path in the following files:
 Completed
 ```
 Launch the tutorial in Docker:
-
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker-compose up -d
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] Running 5/8
+[+] Running 5/8try [⣿⣿] Pulling                                                                                                                                                                            32.8s
+[+] Running 5/8try [⣿⣿] Pulling                                                                                                                                                                            33.9s
+[+] Running 8/8try [⣿⣿] Pulling                                                                                                                                                                            35.5s
+ ✔ schema-registry Pulled                                                                                                                                                                                  48.8s
+   ✔ cc56da8e9915 Already exists                                                                                                                                                                            0.0s
+   ✔ 5b43102698a3 Already exists                                                                                                                                                                            0.0s
+ ✔ tools Pulled                                                                                                                                                                                            48.5s
+   ✔ 14f3e5c6934d Already exists                                                                                                                                                                            0.1s
+ ✔ kafka Pulled                                                                                                                                                                                            45.4s
+   ✔ ccedcc56793a Already exists                                                                                                                                                                            0.0s
+   ✔ a3fab758f660 Already exists                                                                                                                                                                            0.0s
+[+] Running 10/10
+ ✔ Network clickstream_default  Created                                                                                                                                                                     0.5s
+ ✔ Container elasticsearch      Started                                                                                                                                                                    10.0s
+ ✔ Container grafana            Started                                                                                                                                                                    10.0s
+ ✔ Container zookeeper          Started                                                                                                                                                                     9.9s
+ ✔ Container tools              Started                                                                                                                                                                     9.8s
+ ✔ Container kafka              Started                                                                                                                                                                     8.5s
+ ✔ Container schema-registry    Started                                                                                                                                                                     8.5s
+ ✔ Container ksqldb-server      Started                                                                                                                                                                     9.3s
+ ✔ Container ksqldb-cli         Started                                                                                                                                                                     9.9s
+```
+ ✔ Container control-center     Started    
