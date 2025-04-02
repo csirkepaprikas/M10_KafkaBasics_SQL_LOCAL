@@ -134,3 +134,74 @@ bmikes@bmikes:~/kafka_2.13-4.0.0$ bin/kafka-server-start.sh config/server.proper
 [2025-04-02 16:59:09,628] INFO Kafka startTimeMs: 1743605949627 (org.apache.kafka.common.utils.AppInfoParser)
 [2025-04-02 16:59:09,631] INFO [KafkaRaftServer nodeId=1] Kafka Server started (kafka.server.KafkaRaftServer)
 ```
+Then after I enabled the WSL integration in the docker desktop, I got the Docker image:
+
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0$ sudo docker pull apache/kafka:4.0.0
+[sudo] password for bmikes:
+4.0.0: Pulling from apache/kafka
+35e38a4b206f: Download complete
+2fa1f65d07a3: Download complete
+28bd55152645: Download complete
+f18232174bc9: Download complete
+729fc64ae8c1: Download complete
+643bf8a7c247: Download complete
+b8eeb529f1af: Download complete
+a723193c2f26: Download complete
+73851e29d6a7: Download complete
+c3f73af09931: Download complete
+b42f712acf6d: Download complete
+Digest: sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75
+Status: Downloaded newer image for apache/kafka:4.0.0
+docker.io/apache/kafka:4.0.0
+```
+Started the Kafka Docker container: 
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0$ sudo docker run -p 9092:9092 apache/kafka:4.0.0
+===> User
+uid=1000(appuser) gid=1000(appuser) groups=1000(appuser)
+===> Setting default values of environment variables if not already set.
+CLUSTER_ID not set. Setting it to default value: "5L6g3nShT-eMCtK--X86sw"
+===> Configuring ...
+===> Launching ...
+===> Using provided cluster id 5L6g3nShT-eMCtK--X86sw ...
+[2025-04-02 15:18:19,302] INFO Registered kafka:type=kafka.Log4jController MBean (kafka.utils.Log4jControllerRegistration$)
+[2025-04-02 15:18:19,746] INFO Registered signal handlers for TERM, INT, HUP (org.apache.kafka.common.utils.LoggingSignalHandler)
+[2025-04-02 15:18:19,752] INFO [ControllerServer id=1] Starting controller (kafka.server.ControllerServer)
+[2025-04-02 15:18:20,091] INFO Updated connection-accept-rate max connection creation rate to 2147483647 (kafka.network.ConnectionQuotas)
+[2025-04-02 15:18:20,167] INFO [SocketServer listenerType=CONTROLLER, nodeId=1] Created data-plane acceptor and processors for endpoint : ListenerName(CONTROLLER) (kafka.network.SocketServer)
+[2025-04-02 15:18:20,180] INFO CONTROLLER: resolved wildcard host to 4eead6fcca73 (org.apache.kafka.metadata.ListenerInfo)
+[2025-04-02 15:18:20,194] INFO authorizerStart completed for endpoint CONTROLLER. Endpoint is now READY. (org.apache.kafka.server.network.EndpointReadyFutures)
+[2025-04-02 15:18:20,197] INFO [SharedServer id=1] Starting SharedServer (kafka.server.SharedServer)
+[2025-04-02 15:18:20,338] INFO [LogLoader partition=__cluster_metadata-0, dir=/tmp/kraft-combined-logs] Loading producer state till offset 0 (org.apache.kafka.storage.internals.log.UnifiedLog)
+[2025-04-02 15:18:20,343] INFO [LogLoader partition=__cluster_metadata-0, dir=/tmp/kraft-combined-logs] Reloading from producer snapshot and rebuilding producer state from offset 0 (org.apache.kafka.storage.internals.log.UnifiedLog)
+.
+.
+.
+        transaction.state.log.num.partitions = 50
+        transaction.state.log.replication.factor = 1
+        transaction.state.log.segment.bytes = 104857600
+        transactional.id.expiration.ms = 604800000
+        unclean.leader.election.enable = false
+        unclean.leader.election.interval.ms = 300000
+        unstable.api.versions.enable = false
+        unstable.feature.versions.enable = false
+ (org.apache.kafka.common.config.AbstractConfig)
+[2025-04-02 15:18:21,500] INFO [BrokerLifecycleManager id=1] The broker is in RECOVERY. (kafka.server.BrokerLifecycleManager)
+[2025-04-02 15:18:21,502] INFO [BrokerServer id=1] Waiting for the broker to be unfenced (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,535] INFO [BrokerLifecycleManager id=1] The broker has been unfenced. Transitioning from RECOVERY to RUNNING. (kafka.server.BrokerLifecycleManager)
+[2025-04-02 15:18:21,536] INFO [BrokerServer id=1] Finished waiting for the broker to be unfenced (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,538] INFO authorizerStart completed for endpoint PLAINTEXT. Endpoint is now READY. (org.apache.kafka.server.network.EndpointReadyFutures)
+[2025-04-02 15:18:21,539] INFO [SocketServer listenerType=BROKER, nodeId=1] Enabling request processing. (kafka.network.SocketServer)
+[2025-04-02 15:18:21,540] INFO Awaiting socket connections on 0.0.0.0:9092. (kafka.network.DataPlaneAcceptor)
+[2025-04-02 15:18:21,543] INFO [BrokerServer id=1] Waiting for all of the authorizer futures to be completed (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,545] INFO [BrokerServer id=1] Finished waiting for all of the authorizer futures to be completed (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,547] INFO [BrokerServer id=1] Waiting for all of the SocketServer Acceptors to be started (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,547] INFO [BrokerServer id=1] Finished waiting for all of the SocketServer Acceptors to be started (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,548] INFO [BrokerServer id=1] Transition from STARTING to STARTED (kafka.server.BrokerServer)
+[2025-04-02 15:18:21,550] INFO Kafka version: 4.0.0 (org.apache.kafka.common.utils.AppInfoParser)
+[2025-04-02 15:18:21,550] INFO Kafka commitId: 985bc99521dd22bb (org.apache.kafka.common.utils.AppInfoParser)
+[2025-04-02 15:18:21,550] INFO Kafka startTimeMs: 1743607101548 (org.apache.kafka.common.utils.AppInfoParser)
+[2025-04-02 15:18:21,553] INFO [KafkaRaftServer nodeId=1] Kafka Server started (kafka.server.KafkaRaftServer)
+```
+
