@@ -2,7 +2,7 @@
 ### Balázs Mikes
 
 #### github link:
-https://github.com/csirkepaprikas/M08_SparkML_PYTHON_AZURE.git
+https://github.com/csirkepaprikas/M10_KafkaBasics_SQL_LOCAL.git
 ## This module is dedicated to Kafka.
 
 This task is a basic introduction to the Kafka world, and it will guided me through basic operations on top of Kafka.
