@@ -249,3 +249,119 @@ This is my last event
 ^CProcessed a total of 1 messages
 bmikes@bmikes:~/kafka_2.13-4.0.0$
 ```
+
+## Create Clickstream Data Analysis Pipeline Using ksqlDB in Confluent Platform
+
+This example shows how you can use ksqlDB to process a stream of click data, aggregate and filter it, and join to information about the users. Visualisation of the results is provided by Grafana, on top of data streamed to Elasticsearch.
+
+These steps will guide you through how to setup your environment and run the clickstream analysis tutorial from a Docker container.
+
+![clickstream_1](https://github.com/user-attachments/assets/f9ed1a94-00ca-4b4b-b168-74f8b24ddf3b)
+
+I also installed jq:
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0$ sudo apt  install jq
+[sudo] password for bmikes:
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+The following additional packages will be installed:
+  libjq1 libonig5
+The following NEW packages will be installed:
+  jq libjq1 libonig5
+0 upgraded, 3 newly installed, 0 to remove and 130 not upgraded.
+Need to get 378 kB of archives.
+After this operation, 1125 kB of additional disk space will be used.
+Do you want to continue? [Y/n] Y
+Get:1 http://archive.ubuntu.com/ubuntu noble/main amd64 libonig5 amd64 6.9.9-1build1 [172 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble/main amd64 libjq1 amd64 1.7.1-3build1 [141 kB]
+Get:3 http://archive.ubuntu.com/ubuntu noble/main amd64 jq amd64 1.7.1-3build1 [65.5 kB]
+Fetched 378 kB in 1s (372 kB/s)
+Selecting previously unselected package libonig5:amd64.
+(Reading database ... 41926 files and directories currently installed.)
+Preparing to unpack .../libonig5_6.9.9-1build1_amd64.deb ...
+Unpacking libonig5:amd64 (6.9.9-1build1) ...
+Selecting previously unselected package libjq1:amd64.
+Preparing to unpack .../libjq1_1.7.1-3build1_amd64.deb ...
+Unpacking libjq1:amd64 (1.7.1-3build1) ...
+Selecting previously unselected package jq.
+Preparing to unpack .../jq_1.7.1-3build1_amd64.deb ...
+Unpacking jq (1.7.1-3build1) ...
+Setting up libonig5:amd64 (6.9.9-1build1) ...
+Setting up libjq1:amd64 (1.7.1-3build1) ...
+Setting up jq (1.7.1-3build1) ...
+Processing triggers for man-db (2.12.0-4build2) ...
+Processing triggers for libc-bin (2.39-0ubuntu8.3) ...
+```
+If you are using Linux as your host, for the Elasticsearch container to start successfully you must first run:
+
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0$ sudo sysctl -w vm.max_map_count=262144
+vm.max_map_count = 262144
+```
+## Download and run the tutorial
+
+The tutorial is built using Docker Compose. It brings together several Docker images with the required networking and dependencies. The images are quite large and depending on your network connection may take 10-15 minutes to download.
+
+Clone the confluentinc/examples GitHub repository:
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0$ git clone https://github.com/confluentinc/examples.git
+Cloning into 'examples'...
+remote: Enumerating objects: 60233, done.
+remote: Counting objects: 100% (123/123), done.
+remote: Compressing objects: 100% (69/69), done.
+remote: Total 60233 (delta 96), reused 57 (delta 54), pack-reused 60110 (from 3)
+Receiving objects: 100% (60233/60233), 86.50 MiB | 6.13 MiB/s, done.
+Resolving deltas: 100% (44423/44423), done.
+bmikes@bmikes:~/kafka_2.13-4.0.0$
+```
+Navigate to the examples/clickstream directory and switch to the Confluent Platform release branch:
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0$ cd examples/clickstream
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ git checkout 7.9.0-post
+Already on '7.9.0-post'
+Your branch is up to date with 'origin/7.9.0-post'.
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$
+```
+
+## Startup
+
+Get the Jar files for kafka-connect-datagen (source connector) and kafka-connect-elasticsearch (sink connector).
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker run -v $PWD/confluent-hub-components:/share/confluent-hub-components confluentinc/ksqldb-server:0.8.0 confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:0.4.0
+Unable to find image 'confluentinc/ksqldb-server:0.8.0' locally
+0.8.0: Pulling from confluentinc/ksqldb-server
+78df800c20fa: Download complete
+2ce6b3054e27: Download complete
+5c37d48703d0: Download complete
+55cdf815a8db: Download complete
+6c697f007926: Download complete
+2a2221ce6b51: Download complete
+1b2bd6926a72: Download complete
+ad1e6fb4e037: Download complete
+c039410f052a: Download complete
+ba83411e7c91: Download complete
+1d80e9c07984: Download complete
+8a45f3148b49: Download complete
+Digest: sha256:7ee1bfd944de3804712fe522add3d9867da0bf6c105eb2b76eb4dc261a9b0cc0
+Status: Downloaded newer image for confluentinc/ksqldb-server:0.8.0
+Running in a "--no-prompt" mode
+Implicit acceptance of the license below:
+Apache License 2.0
+https://www.apache.org/licenses/LICENSE-2.0
+Downloading component Kafka Connect Datagen 0.4.0, provided by Confluent, Inc. from Confluent Hub and installing into /share/confluent-hub-components
+Adding installation directory to plugin path in the following files:
+
+Completed
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker run -v $PWD/confluent-hub-components:/share/confluent-hub-components confluentinc/ksqldb-server:0.8.0 confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:10.0.2
+Running in a "--no-prompt" mode
+Implicit acceptance of the license below:
+Confluent Community License
+http://www.confluent.io/confluent-community-license
+Downloading component Kafka Connect Elasticsearch 10.0.2, provided by Confluent, Inc. from Confluent Hub and installing into /share/confluent-hub-components
+Adding installation directory to plugin path in the following files:
+
+Completed
+```
+Launch the tutorial in Docker:
+
