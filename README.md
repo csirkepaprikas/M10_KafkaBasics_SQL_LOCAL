@@ -391,3 +391,430 @@ WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml
  ✔ Container ksqldb-cli         Started                                                                                                                                                                     9.9s
 ```
  ✔ Container control-center     Started    
+
+I run the docker-compose ps status command to ensure that everything has started correctly:
+
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker-compose ps
+NAME              IMAGE                                                 COMMAND                  SERVICE           CREATED        STATUS          PORTS
+control-center    confluentinc/cp-enterprise-control-center:7.9.0       "/etc/confluent/dock…"   control-center    12 hours ago   Up 12 hours     0.0.0.0:9021->9021/tcp
+elasticsearch     docker.elastic.co/elasticsearch/elasticsearch:6.3.0   "/usr/local/bin/dock…"   elasticsearch     12 hours ago   Up 12 hours     0.0.0.0:9200->9200/tcp, 9300/tcp
+grafana           grafana/grafana:5.2.4                                 "/run.sh"                grafana           12 hours ago   Up 12 hours     0.0.0.0:3000->3000/tcp
+kafka             confluentinc/cp-server:7.9.0                          "/etc/confluent/dock…"   kafka             12 hours ago   Up 12 hours     9092/tcp
+ksqldb-cli        confluentinc/cp-ksqldb-cli:7.9.0                      "/bin/sh"                ksqldb-cli        12 hours ago   Up 12 hours
+ksqldb-server     confluentinc/cp-ksqldb-server:7.9.0                   "/etc/confluent/dock…"   ksqldb-server     12 hours ago   Up 33 seconds   0.0.0.0:8083->8083/tcp, 0.0.0.0:8088->8088/tcp
+schema-registry   confluentinc/cp-schema-registry:7.9.0                 "/etc/confluent/dock…"   schema-registry   12 hours ago   Up 12 hours     8081/tcp
+tools             cnfltraining/training-tools:5.4                       "/bin/bash"              tools             12 hours ago   Up 12 hours
+zookeeper         confluentinc/cp-zookeeper:7.9.0                       "/etc/confluent/dock…"   zookeeper         12 hours ago   Up 12 hours     2181/tcp, 2888/tcp, 3888/tcp
+```
+## Create the Clickstream Data
+
+Once I’ve confirmed all the Docker containers are running, created the source connectors that generate mock data. This demo leverages the embedded Connect worker in ksqlDB.
+
+Launch the ksqlDB CLI:
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/m10_kafkabasics_sql_local-master$ docker-compose exec ksqldb-cli ksql http://ksqldb-server:8088
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/m10_kafkabasics_sql_local-master/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+OpenJDK 64-Bit Server VM warning: Option UseConcMarkSweepGC was deprecated in version 9.0 and will likely be removed in a future release.
+
+                  ===========================================
+                  =       _              _ ____  ____       =
+                  =      | | _____  __ _| |  _ \| __ )      =
+                  =      | |/ / __|/ _` | | | | |  _ \      =
+                  =      |   <\__ \ (_| | | |_| | |_) |     =
+                  =      |_|\_\___/\__, |_|____/|____/      =
+                  =                   |_|                   =
+                  =  Event Streaming Database purpose-built =
+                  =        for stream processing apps       =
+                  ===========================================
+
+Copyright 2017-2021 Confluent Inc.
+
+CLI v6.2.0, Server v6.2.0 located at http://ksqldb-server:8088
+Server Status: RUNNING
+
+Having trouble? Type 'help' (case-insensitive) for a rundown of how things work!
+```
+
+I ensured the ksqlDB server is ready to receive requests by running the following until it succeeds:
+
+```python
+ksql> show topics;
+
+ Kafka Topic | Partitions | Partition Replicas
+-----------------------------------------------
+-----------------------------------------------
+ksql>
+```
+The created topics:
+
+```python
+ksql> show topics;
+
+ Kafka Topic | Partitions | Partition Replicas
+-----------------------------------------------
+-----------------------------------------------
+ksql> RUN SCRIPT '/scripts/create-connectors.sql';
+
+CREATE SOURCE CONNECTOR datagen_clickstream_codes WITH (
+  'connector.class'          = 'io.confluent.kafka.connect.datagen.DatagenConnector',
+  'kafka.topic'              = 'clickstream_codes',
+  'quickstart'               = 'clickstream_codes',
+  'maxInterval'              = '20',
+  'format'                   = 'json',
+  'key.converter'            = 'org.apache.kafka.connect.converters.IntegerConverter');
+ Message
+---------------------------------------------
+ Created connector DATAGEN_CLICKSTREAM_CODES
+---------------------------------------------
+
+CREATE SOURCE CONNECTOR datagen_clickstream_users WITH (
+  'connector.class'          = 'io.confluent.kafka.connect.datagen.DatagenConnector',
+  'kafka.topic'              = 'clickstream_users',
+  'quickstart'               = 'clickstream_users',
+  'maxInterval'              = '10',
+  'format'                   = 'json',
+  'key.converter'            = 'org.apache.kafka.connect.converters.IntegerConverter');
+ Message
+---------------------------------------------
+ Created connector DATAGEN_CLICKSTREAM_USERS
+---------------------------------------------
+
+CREATE SOURCE CONNECTOR datagen_clickstream WITH (
+  'connector.class'          = 'io.confluent.kafka.connect.datagen.DatagenConnector',
+  'kafka.topic'              = 'clickstream',
+  'quickstart'               = 'clickstream',
+  'maxInterval'              = '30',
+  'format'                   = 'json');
+ Message
+---------------------------------------
+ Created connector DATAGEN_CLICKSTREAM
+---------------------------------------
+```
+Now the clickstream generator is running, simulating the stream of clicks. Sample the messages in the clickstream topic:
+```python
+ksql> print clickstream limit 3;
+Key format: HOPPING(JSON) or TUMBLING(JSON) or HOPPING(KAFKA_STRING) or TUMBLING(KAFKA_STRING) or KAFKA_STRING
+Value format: JSON or KAFKA_STRING
+rowtime: 2025/04/03 15:55:22.827 Z, key: [122.90@3328778278569914935/-], value: {"ip":"122.90.225.227","userid":14,"remote_user":"-","time":"1","_time":1,"request":"GET /images/logo-small.png HTTP/1.1","status
+":"405","bytes":"1289","referrer":"-","agent":"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}
+rowtime: 2025/04/03 15:55:22.972 Z, key: [233.90@3328778278569914935/-], value: {"ip":"233.90.225.227","userid":0,"remote_user":"-","time":"11","_time":11,"request":"GET /index.html HTTP/1.1","status":"407","b
+ytes":"2048","referrer":"-","agent":"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}
+rowtime: 2025/04/03 15:55:23.133 Z, key: [233.245@3328502296856376376/-], value: {"ip":"233.245.174.248","userid":26,"remote_user":"-","time":"21","_time":21,"request":"GET /index.html HTTP/1.1","status":"404","bytes":"1289","referrer":"-","agent":"Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"}
+Topic printing ceased
+```
+The second data generator running is for the HTTP status codes. Sample the messages in the clickstream_codes topic:
+```python
+ksql> print clickstream_codes limit 3;
+Key format: KAFKA_INT
+Value format: JSON or KAFKA_STRING
+rowtime: 2025/04/03 15:55:20.709 Z, key: 200, value: {"code":200,"definition":"Successful"}
+rowtime: 2025/04/03 15:55:21.102 Z, key: 404, value: {"code":404,"definition":"Page not found"}
+rowtime: 2025/04/03 15:55:21.170 Z, key: 407, value: {"code":407,"definition":"Proxy authentication required"}
+Topic printing ceased
+```
+The third data generator is for the user information. Sample the messages in the clickstream_users topic:
+
+```python
+ksql> print clickstream_users limit 3;
+Key format: KAFKA_INT
+Value format: JSON or KAFKA_STRING
+rowtime: 2025/04/03 15:55:22.249 Z, key: 1, value: {"user_id":1,"username":"alison_99","registered_at":1487742519116,"first_name":"Curran","last_name":"Lalonde","city":"Raleigh","level":"Gold"}
+rowtime: 2025/04/03 15:55:22.637 Z, key: 2, value: {"user_id":2,"username":"bobk_43","registered_at":1414797959168,"first_name":"Abdel","last_name":"Trice","city":"Raleigh","level":"Gold"}
+rowtime: 2025/04/03 15:55:23.003 Z, key: 3, value: {"user_id":3,"username":"BenSteins_235","registered_at":1449200239794,"first_name":"Ferd","last_name":"Adicot","city":"London","level":"Silver"}
+Topic printing ceased
+```
+I visited the Confluent Control Center UI at http://localhost:9021 and checked the broker metrics and the kafka-connect-datagen connectors created with the ksqlDB CLI.
+
+![broker_ui](https://github.com/user-attachments/assets/98094363-fa45-4572-977a-e663b49525a9)
+
+
+![connctr_1](https://github.com/user-attachments/assets/44981fa9-6069-4e2b-8755-2866e5c74ed9)
+
+
+## Load the Streaming Data to ksqlDB
+
+Loaded the statements.sql file that runs the tutorial app.
+```python
+ksql> RUN SCRIPT '/scripts/statements.sql';
+
+CREATE STREAM CLICKSTREAM (_TIME BIGINT, TIME STRING, IP STRING, REQUEST STRING, STATUS INTEGER, USERID INTEGER, BYTES BIGINT, AGENT STRING) WITH (KAFKA_TOPIC='clickstream', KEY_FORMAT='KAFKA', VALUE_FORMAT='J
+SON');
+ Message
+----------------
+ Stream created
+----------------
+
+CREATE TABLE CLICKSTREAM_CODES (CODE INTEGER PRIMARY KEY, DEFINITION STRING) WITH (KAFKA_TOPIC='clickstream_codes', KEY_FORMAT='KAFKA', VALUE_FORMAT='JSON');
+ Message
+---------------
+ Table created
+---------------
+
+CREATE TABLE WEB_USERS (USER_ID INTEGER PRIMARY KEY, REGISTERED_AT BIGINT, USERNAME STRING, FIRST_NAME STRING, LAST_NAME STRING, CITY STRING, LEVEL STRING) WITH (KAFKA_TOPIC='clickstream_users', KEY_FORMAT='KA
+FKA', VALUE_FORMAT='JSON');
+ Message
+---------------
+ Table created
+---------------
+
+CREATE STREAM USER_CLICKSTREAM WITH (KAFKA_TOPIC='USER_CLICKSTREAM', PARTITIONS=1, REPLICAS=1) AS SELECT
+  C.USERID USERID,
+  U.USERNAME USERNAME,
+  C.IP IP,
+  U.CITY CITY,
+  C.REQUEST REQUEST,
+  C.STATUS STATUS,
+  C.BYTES BYTES
+FROM CLICKSTREAM C
+LEFT OUTER JOIN WEB_USERS U ON ((C.USERID = U.USER_ID))
+EMIT CHANGES;
+ Message
+-----------------------------------------------
+ Created query with ID CSAS_USER_CLICKSTREAM_5
+-----------------------------------------------
+
+CREATE STREAM ENRICHED_ERROR_CODES WITH (KAFKA_TOPIC='ENRICHED_ERROR_CODES', PARTITIONS=1, REPLICAS=1) AS SELECT
+  CLICKSTREAM_CODES.CODE CODE,
+  CLICKSTREAM_CODES.DEFINITION DEFINITION
+FROM CLICKSTREAM CLICKSTREAM
+LEFT OUTER JOIN CLICKSTREAM_CODES CLICKSTREAM_CODES ON ((CLICKSTREAM.STATUS = CLICKSTREAM_CODES.CODE))
+EMIT CHANGES;
+ Message
+---------------------------------------------------
+ Created query with ID CSAS_ENRICHED_ERROR_CODES_7
+---------------------------------------------------
+
+CREATE TABLE EVENTS_PER_MIN WITH (KAFKA_TOPIC='EVENTS_PER_MIN', PARTITIONS=1, REPLICAS=1) AS SELECT
+  CLICKSTREAM.USERID K1,
+  AS_VALUE(CLICKSTREAM.USERID) USERID,
+  WINDOWSTART EVENT_TS,
+  COUNT(*) EVENTS
+FROM CLICKSTREAM CLICKSTREAM
+WINDOW TUMBLING ( SIZE 60 SECONDS )
+GROUP BY CLICKSTREAM.USERID
+EMIT CHANGES;
+ Message
+---------------------------------------------
+ Created query with ID CTAS_EVENTS_PER_MIN_9
+---------------------------------------------
+
+CREATE TABLE PAGES_PER_MIN WITH (KAFKA_TOPIC='PAGES_PER_MIN', PARTITIONS=1, REPLICAS=1) AS SELECT
+  CLICKSTREAM.USERID K1,
+  AS_VALUE(CLICKSTREAM.USERID) USERID,
+  WINDOWSTART EVENT_TS,
+  COUNT(*) PAGES
+FROM CLICKSTREAM CLICKSTREAM
+WINDOW HOPPING ( SIZE 60 SECONDS , ADVANCE BY 5 SECONDS )
+WHERE (CLICKSTREAM.REQUEST LIKE '%html%')
+GROUP BY CLICKSTREAM.USERID
+EMIT CHANGES;
+ Message
+---------------------------------------------
+ Created query with ID CTAS_PAGES_PER_MIN_11
+---------------------------------------------
+
+CREATE TABLE CLICK_USER_SESSIONS WITH (KAFKA_TOPIC='CLICK_USER_SESSIONS', PARTITIONS=1, REPLICAS=1) AS SELECT
+  USER_CLICKSTREAM.USERNAME K,
+  AS_VALUE(USER_CLICKSTREAM.USERNAME) USERNAME,
+  WINDOWEND EVENT_TS,
+  COUNT(*) EVENTS
+FROM USER_CLICKSTREAM USER_CLICKSTREAM
+WINDOW SESSION ( 30 SECONDS )
+GROUP BY USER_CLICKSTREAM.USERNAME
+EMIT CHANGES;
+ Message
+---------------------------------------------------
+ Created query with ID CTAS_CLICK_USER_SESSIONS_13
+---------------------------------------------------
+
+CREATE TABLE ERRORS_PER_MIN_ALERT WITH (KAFKA_TOPIC='ERRORS_PER_MIN_ALERT', PARTITIONS=1, REPLICAS=1) AS SELECT
+  CLICKSTREAM.STATUS K1,
+  AS_VALUE(CLICKSTREAM.STATUS) STATUS,
+  WINDOWSTART EVENT_TS,
+  COUNT(*) ERRORS
+FROM CLICKSTREAM CLICKSTREAM
+WINDOW HOPPING ( SIZE 60 SECONDS , ADVANCE BY 20 SECONDS )
+WHERE (CLICKSTREAM.STATUS > 400)
+GROUP BY CLICKSTREAM.STATUS
+HAVING ((COUNT(*) > 5) AND (COUNT(*) IS NOT NULL))
+EMIT CHANGES;
+ Message
+----------------------------------------------------
+ Created query with ID CTAS_ERRORS_PER_MIN_ALERT_15
+----------------------------------------------------
+
+CREATE TABLE ERRORS_PER_MIN WITH (KAFKA_TOPIC='ERRORS_PER_MIN', PARTITIONS=1, REPLICAS=1) AS SELECT
+  CLICKSTREAM.STATUS K1,
+  AS_VALUE(CLICKSTREAM.STATUS) STATUS,
+  WINDOWSTART EVENT_TS,
+  COUNT(*) ERRORS
+FROM CLICKSTREAM CLICKSTREAM
+WINDOW HOPPING ( SIZE 60 SECONDS , ADVANCE BY 5 SECONDS )
+WHERE (CLICKSTREAM.STATUS > 400)
+GROUP BY CLICKSTREAM.STATUS
+EMIT CHANGES;
+ Message
+----------------------------------------------
+ Created query with ID CTAS_ERRORS_PER_MIN_17
+----------------------------------------------
+
+CREATE TABLE ENRICHED_ERROR_CODES_COUNT WITH (KAFKA_TOPIC='ENRICHED_ERROR_CODES_COUNT', PARTITIONS=1, REPLICAS=1) AS SELECT
+  ENRICHED_ERROR_CODES.CODE K1,
+  ENRICHED_ERROR_CODES.DEFINITION K2,
+  AS_VALUE(ENRICHED_ERROR_CODES.CODE) CODE,
+  WINDOWSTART EVENT_TS,
+  AS_VALUE(ENRICHED_ERROR_CODES.DEFINITION) DEFINITION,
+  COUNT(*) COUNT
+FROM ENRICHED_ERROR_CODES ENRICHED_ERROR_CODES
+WINDOW TUMBLING ( SIZE 30 SECONDS )
+GROUP BY ENRICHED_ERROR_CODES.CODE, ENRICHED_ERROR_CODES.DEFINITION
+HAVING (COUNT(*) > 1)
+EMIT CHANGES;
+ Message
+----------------------------------------------------------
+ Created query with ID CTAS_ENRICHED_ERROR_CODES_COUNT_19
+----------------------------------------------------------
+
+CREATE TABLE USER_IP_ACTIVITY WITH (KAFKA_TOPIC='USER_IP_ACTIVITY', PARTITIONS=1, REPLICAS=1) AS SELECT
+  USER_CLICKSTREAM.USERNAME K1,
+  USER_CLICKSTREAM.IP K2,
+  USER_CLICKSTREAM.CITY K3,
+  AS_VALUE(USER_CLICKSTREAM.USERNAME) USERNAME,
+  WINDOWSTART EVENT_TS,
+  AS_VALUE(USER_CLICKSTREAM.IP) IP,
+  AS_VALUE(USER_CLICKSTREAM.CITY) CITY,
+  COUNT(*) COUNT
+FROM USER_CLICKSTREAM USER_CLICKSTREAM
+WINDOW TUMBLING ( SIZE 60 SECONDS )
+GROUP BY USER_CLICKSTREAM.USERNAME, USER_CLICKSTREAM.IP, USER_CLICKSTREAM.CITY
+HAVING (COUNT(*) > 1)
+EMIT CHANGES;
+ Message
+------------------------------------------------
+ Created query with ID CTAS_USER_IP_ACTIVITY_21
+------------------------------------------------
+```
+## Verify the data
+
+Went to Confluent Control Center UI at http://localhost:9021, and view the ksqlDB view Flow.
+
+![flow_cha](https://github.com/user-attachments/assets/d7d8c63e-e985-4c43-bd84-ef44a47268b3)
+
+Verified that data is being streamed through various tables and streams. Query one of the streams:
+
+![query_1](https://github.com/user-attachments/assets/9e24f2fe-57db-4590-a0b2-ed80929c0a26)
+
+## Load the Clickstream Data in Grafana
+
+Sent the ksqlDB tables to Elasticsearch and Grafana.
+
+1. Set up the required Elasticsearch document mapping template
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker-compose exec elasticsearch bash -c '/scripts/elastic-dynamic-template.sh'
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+
+-> Removing kafkaconnect template if it exists already.
+
+
+-> Loading Elastic Dynamic Template to ensure _TS fields are used for TimeStamp
+```
+Run this command to send the ksqlDB tables to Elasticsearch and Grafana:
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/edocker-compose exec ksqldb-server bash -c '/scripts/ksql-tables-to-grafana.sh'tables-to-grafana.sh'
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+Loading Clickstream-Demo TABLES to Kafka Connect => Elastic => Grafana datasource
+
+
+==================================================================
+Charting  CLICK_USER_SESSIONS
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana click_user_sessions
+        -> Connecting: click_user_sessions
+                -> Adding Kafka Connect Elastic Source es_sink_CLICK_USER_SESSIONS
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  USER_IP_ACTIVITY
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana user_ip_activity
+        -> Connecting: user_ip_activity
+                -> Adding Kafka Connect Elastic Source es_sink_USER_IP_ACTIVITY
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ENRICHED_ERROR_CODES_COUNT
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana enriched_error_codes_count
+        -> Connecting: enriched_error_codes_count
+                -> Adding Kafka Connect Elastic Source es_sink_ENRICHED_ERROR_CODES_COUNT
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ERRORS_PER_MIN_ALERT
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana errors_per_min_alert
+        -> Connecting: errors_per_min_alert
+                -> Adding Kafka Connect Elastic Source es_sink_ERRORS_PER_MIN_ALERT
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ERRORS_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana errors_per_min
+        -> Connecting: errors_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_ERRORS_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  EVENTS_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana events_per_min
+        -> Connecting: events_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_EVENTS_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  PAGES_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana pages_per_min
+        -> Connecting: pages_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_PAGES_PER_MIN
+                -> Adding Grafana Source
+
+
+Done!
+```
+Loaded the dashboard into Grafana.
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker-compose exec grafana bash -c '/scripts/clickstream-analysis-dashboard.sh'
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+Loading Grafana ClickStream Dashboard
+
+
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$
+```
+
+
+
+
