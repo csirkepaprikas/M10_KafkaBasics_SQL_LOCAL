@@ -814,6 +814,46 @@ Loading Grafana ClickStream Dashboard
 
 bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$
 ```
+As I am heading to the Grafana dashboard, I can see different charts, some of them are fulfill the criteria of the homework, what we should visualize:
+
+### General website analytics, such as hit count and visitors:
+
+![graf_5](https://github.com/user-attachments/assets/c637a4ba-f98c-40f3-ad30-6b44de6c867a)
+
+This chart covers the tas written above, it counts the events grouped by time, this way the hit count or the number of the visitors can be easily measured.
+
+### Mapping user-IP addresses to actual users and their location
+
+![graf_2](https://github.com/user-attachments/assets/f361b1b0-ac3a-4108-acce-a8278af3984a)
+
+The chart synchronizes the clicks of the users with the user informations stored in the Web_users table.
+
+### Error-code occurrence and enrichment
+
+![graf_1](https://github.com/user-attachments/assets/073545e8-8897-4298-bd53-9a4e859ab3fe)
+
+![graf_6](https://github.com/user-attachments/assets/d730533a-82dc-4a85-af28-e63ee0fe83e0)
+
+In my understanding two charts above comply with the criteria:
+"400 Error Status Alert HAVING count(*) > 5"
+This chart tracks the occurrence of HTTP 400-series error codes (client-side errors).
+It generates an alert when the number of such errors exceeds a defined threshold (e.g., 5).
+This allows for real-time monitoring of unusual spikes in error responses, which can indicate issues in the frontend or user requests.
+
+"TABLE-STREAM JOIN between ClickStream and Codes Table"
+This component performs the enrichment.
+It joins the raw clickstream events (which may contain numeric HTTP status codes) with a reference table that maps these codes to human-readable descriptions (e.g., 404 → "Not Found").
+As a result, the output stream provides more contextualized and meaningful information about each event.
+
+
+
+
+
+
+
+
+
+
 
 
 
