@@ -845,6 +845,250 @@ This component performs the enrichment.
 It joins the raw clickstream events (which may contain numeric HTTP status codes) with a reference table that maps these codes to human-readable descriptions (e.g., 404 → "Not Found").
 As a result, the output stream provides more contextualized and meaningful information about each event.
 
+### Bandwidth use
+
+For this visualizaton I deleted the original EVENTS_PER_MIN table and pimped a little for align this task.
+First I had to delete the ralted query, then dropped the actual table:
+
+![delete_query](https://github.com/user-attachments/assets/2dab139c-b264-44cd-a5a2-1c8dda64e0f9)
+
+![drop_table](https://github.com/user-attachments/assets/d0925c24-b052-44ec-89db-d7b026832905)
+
+Then created the new table which contains the summed kbytes as well:
+
+![new_table_c](https://github.com/user-attachments/assets/93a82f72-2157-4f94-8857-e809de5721e8)
+
+![new_table_c2](https://github.com/user-attachments/assets/8c409556-6070-40ad-9adc-e440f256a541)
+
+Before the vizualization configuration I had to apply the scripts/ksql-tables-to-grafana.sh script:
+
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker-compose exec ksqldb-server bash -c '/scripts/ksql-tables-to-grafana.sh'
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+Loading Clickstream-Demo TABLES to Kafka Connect => Elastic => Grafana datasource
+
+
+==================================================================
+Charting  CLICK_USER_SESSIONS
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana click_user_sessions
+        -> Connecting: click_user_sessions
+                -> Adding Kafka Connect Elastic Source es_sink_CLICK_USER_SESSIONS
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  USER_IP_ACTIVITY
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana user_ip_activity
+        -> Connecting: user_ip_activity
+                -> Adding Kafka Connect Elastic Source es_sink_USER_IP_ACTIVITY
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ENRICHED_ERROR_CODES_COUNT
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana enriched_error_codes_count
+        -> Connecting: enriched_error_codes_count
+                -> Adding Kafka Connect Elastic Source es_sink_ENRICHED_ERROR_CODES_COUNT
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ERRORS_PER_MIN_ALERT
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana errors_per_min_alert
+        -> Connecting: errors_per_min_alert
+                -> Adding Kafka Connect Elastic Source es_sink_ERRORS_PER_MIN_ALERT
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ERRORS_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana errors_per_min
+        -> Connecting: errors_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_ERRORS_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  EVENTS_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana events_per_min
+        -> Connecting: events_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_EVENTS_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  PAGES_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana pages_per_min
+        -> Connecting: pages_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_PAGES_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  USER_SESSIONS
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana user_sessions
+        -> Connecting: user_sessions
+                -> Adding Kafka Connect Elastic Source es_sink_USER_SESSIONS
+                -> Adding Grafana Source
+
+
+Done!
+```
+Then I headed to the grafana to check the actual data source:
+
+![datasource1](https://github.com/user-attachments/assets/27911e22-69e5-4ffd-8707-7daf1a83a531)
+
+Then created the actual chart:
+
+![graf_bandwidht_per-event](https://github.com/user-attachments/assets/a63f9935-5303-4b20-be8a-08a5ff3ce1a0)
+
+There is a more advanced version, where the users have different color and can have some insight of the data distribution among them:
+
+![graf_band_userid](https://github.com/user-attachments/assets/31dcad5e-c122-47a6-b077-c718b674f026)
+
+### Detection of high-bandwidth user sessions
+
+By this vizualization I decided by the table chart, and ordered the users descending by the highest bandwidth:
+
+![graf_high_users](https://github.com/user-attachments/assets/b951e2bf-cd5e-4d9c-842c-7d3754e751ff)
+
+### Sessionization to track user-sessions and understand behavior
+
+By this task I created a new USER_SESSIONS table, which focuses on the sum data traffic, all events pers users, also have a session window, where the session timeframe is limited in 60 minutes.
+
+![table_last_vis](https://github.com/user-attachments/assets/3a81efcc-c992-4eca-be99-cf0490619bc9)
+
+Then I had to run again the  ksql-tables-to-grafana.sh script:
+
+```python
+bmikes@bmikes:~/kafka_2.13-4.0.0/examples/clickstream$ docker-compose exec ksqldb-server bash -c '/scripts/ksql-tables-to-grafana.sh'
+WARN[0000] /home/bmikes/kafka_2.13-4.0.0/examples/clickstream/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion
+Loading Clickstream-Demo TABLES to Kafka Connect => Elastic => Grafana datasource
+
+
+==================================================================
+Charting  CLICK_USER_SESSIONS
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana click_user_sessions
+        -> Connecting: click_user_sessions
+                -> Adding Kafka Connect Elastic Source es_sink_CLICK_USER_SESSIONS
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  USER_IP_ACTIVITY
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana user_ip_activity
+        -> Connecting: user_ip_activity
+                -> Adding Kafka Connect Elastic Source es_sink_USER_IP_ACTIVITY
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ENRICHED_ERROR_CODES_COUNT
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana enriched_error_codes_count
+        -> Connecting: enriched_error_codes_count
+                -> Adding Kafka Connect Elastic Source es_sink_ENRICHED_ERROR_CODES_COUNT
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ERRORS_PER_MIN_ALERT
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana errors_per_min_alert
+        -> Connecting: errors_per_min_alert
+                -> Adding Kafka Connect Elastic Source es_sink_ERRORS_PER_MIN_ALERT
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  ERRORS_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana errors_per_min
+        -> Connecting: errors_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_ERRORS_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  EVENTS_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana events_per_min
+        -> Connecting: events_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_EVENTS_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  PAGES_PER_MIN
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana pages_per_min
+        -> Connecting: pages_per_min
+                -> Adding Kafka Connect Elastic Source es_sink_PAGES_PER_MIN
+                -> Adding Grafana Source
+
+
+==================================================================
+Charting  USER_SESSIONS
+        -> Remove any existing Elastic search config
+        -> Remove any existing Connect config
+        -> Remove any existing Grafana config
+        -> Connecting ksqlDB->Elastic->Grafana user_sessions
+        -> Connecting: user_sessions
+                -> Adding Kafka Connect Elastic Source es_sink_USER_SESSIONS
+                -> Adding Grafana Source
+
+
+Done!
+```
+Then I checked the datasource in grafana:
+
+![usersess](https://github.com/user-attachments/assets/72edf36a-3787-4687-b54b-c5cb9b5d6ad3)
+
+And finally created the table chart, where by the EVENT_TS there is the start timestamp, the session end timestamp also the number of event during the timeframe, the initiator's userid and the sum data traffic.
+As you can see the format of te different values are not so user friendly.
+
+![graf_last](https://github.com/user-attachments/assets/aaf7dfec-bba4-4e88-adc6-6314bca2e6ad)
+
 
 
 
