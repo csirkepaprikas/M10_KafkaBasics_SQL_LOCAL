@@ -818,9 +818,14 @@ As I am heading to the Grafana dashboard, I can see different charts, some of th
 
 ### General website analytics, such as hit count and visitors:
 
+![graf_3](https://github.com/user-attachments/assets/390fcb8d-4f7e-4a91-b193-b93349b80a11)
+
+![graf_4](https://github.com/user-attachments/assets/50757930-e3a4-44a1-a43f-ba66026ce2ce)
+
 ![graf_5](https://github.com/user-attachments/assets/c637a4ba-f98c-40f3-ad30-6b44de6c867a)
 
-This chart covers the tas written above, it counts the events grouped by time, this way the hit count or the number of the visitors can be easily measured.
+
+These charts covers the task written above, it counts the events grouped by time, this way the hit count or the number of the visitors can be easily measured.
 
 ### Mapping user-IP addresses to actual users and their location
 
