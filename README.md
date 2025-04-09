@@ -825,7 +825,7 @@ As I am heading to the Grafana dashboard, I can see different charts, some of th
 ![graf_5](https://github.com/user-attachments/assets/c637a4ba-f98c-40f3-ad30-6b44de6c867a)
 
 
-These charts covers the task written above, it counts the events grouped by time, this way the hit count or the number of the visitors can be easily measured.
+These charts covers the task written above, it counts the events grouped by time, resource hits, page views.
 
 ### Mapping user-IP addresses to actual users and their location
 
